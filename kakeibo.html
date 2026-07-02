@@ -1,0 +1,2247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#4F46E5">
+  <title>Kakeibo</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-light: #EEF2FF;
+      --bg: #F1F5F9;
+      --surface: #FFFFFF;
+      --border: #E2E8F0;
+      --text: #1E293B;
+      --text-muted: #64748B;
+      --nav-height: 64px;
+      --header-height: 60px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+    }
+    #app { padding-bottom: calc(var(--nav-height) + 8px); }
+
+    /* ── Header ── */
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 14px 20px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      min-height: var(--header-height);
+    }
+    .header h1 { font-size: 18px; font-weight: 700; }
+    .header .subtitle { font-size: 12px; opacity: 0.8; margin-top: 3px; }
+
+    /* ── Bottom Nav ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      height: var(--nav-height);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 100;
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      transition: color 0.15s;
+      padding: 0;
+    }
+    .nav-item.active { color: var(--primary); }
+    .nav-item .icon { font-size: 22px; line-height: 1; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 16px;
+      margin: 12px 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .card-title {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 14px; }
+    .form-group:last-child { margin-bottom: 0; }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    input[type="text"], input[type="number"], input[type="date"], select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 16px;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--primary); }
+    .amount-input {
+      font-size: 36px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: -1px;
+      padding: 14px;
+      border: 2px solid var(--border);
+    }
+    .amount-input:focus { border-color: var(--primary); }
+
+    /* ── Category Grid ── */
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .category-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 4px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      background: var(--surface);
+      transition: all 0.15s;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: inherit;
+    }
+    .category-btn:active { transform: scale(0.96); }
+    .category-btn.selected {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .category-btn .emoji { font-size: 22px; line-height: 1.2; }
+
+    /* ── Payment Method ── */
+    .pay-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      font-family: inherit;
+      letter-spacing: 0.2px;
+    }
+    .btn:active { opacity: 0.85; transform: scale(0.98); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-danger { background: #FEF2F2; color: #EF4444; border: 1.5px solid #FECACA; }
+
+    /* ── Progress Bar ── */
+    .progress-bar {
+      height: 7px;
+      background: var(--bg);
+      border-radius: 100px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 100px;
+      transition: width 0.5s ease;
+    }
+
+    /* ── Transaction List ── */
+    .tx-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--bg);
+      cursor: pointer;
+    }
+    .tx-item:last-child { border-bottom: none; }
+    .tx-item:active { opacity: 0.7; }
+    .tx-emoji {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-name {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tx-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .tx-amount {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+    .tx-date-header {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 10px 14px 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ── Month Selector ── */
+    .month-selector {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 2px;
+    }
+    .month-btn {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 10px;
+      color: var(--text-muted);
+      font-family: inherit;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .month-btn:active { background: var(--border); }
+    .month-label { font-size: 16px; font-weight: 700; color: var(--text); }
+
+    /* ── Import Zone ── */
+    .import-zone {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      user-select: none;
+    }
+    .import-zone:hover, .import-zone:active { border-color: var(--primary); background: var(--primary-light); }
+    .import-icon { font-size: 36px; margin-bottom: 8px; }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .badge-import { background: #E0F2FE; color: #0369A1; }
+
+    /* ── Big Summary ── */
+    .big-amount {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+    }
+    .amount-label { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--nav-height) + 16px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1E293B;
+      color: white;
+      padding: 11px 22px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 500;
+      animation: toastIn 0.25s ease;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* ── Empty State ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; line-height: 1.5; }
+
+    /* ── Scroll container ── */
+    .scroll-list {
+      max-height: 320px;
+      overflow-y: auto;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+    .scroll-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--bg);
+      font-size: 13px;
+    }
+    .scroll-item:last-child { border-bottom: none; }
+
+    /* ── Settings row ── */
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--bg);
+      cursor: pointer;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row-label { font-size: 15px; font-weight: 500; }
+    .settings-row-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Chip ── */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--bg);
+      color: var(--text-muted);
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    .tab-btn {
+      padding: 10px 0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      background: var(--bg);
+      color: var(--text-muted);
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// CONSTANTS & CATEGORIES
+// ════════════════════════════════════════════════════════════
+
+const CATEGORIES = {
+  food:          { name: 'Groceries',    emoji: '🛒', color: '#22C55E' },
+  convenience:   { name: 'Konbini',      emoji: '🏪', color: '#059669' },
+  dining:        { name: 'Dining Out',   emoji: '🍜', color: '#F97316' },
+  cafe:          { name: 'Cafe',         emoji: '☕', color: '#92400E' },
+  transport:     { name: 'Transport',    emoji: '🚃', color: '#3B82F6' },
+  entertainment: { name: 'Fun',          emoji: '🎮', color: '#A855F7' },
+  movies:        { name: 'Movies',       emoji: '🎬', color: '#7C3AED' },
+  daily:         { name: 'Daily Items',  emoji: '🧴', color: '#14B8A6' },
+  shopping:      { name: 'Shopping',     emoji: '🛍️', color: '#EC4899' },
+  clothes:       { name: 'Clothes',      emoji: '👗', color: '#DB2777' },
+  utilities:     { name: 'Utilities',    emoji: '💡', color: '#EAB308' },
+  health:        { name: 'Health',       emoji: '🏥', color: '#EF4444' },
+  vacation:      { name: 'Vacation',     emoji: '✈️', color: '#0EA5E9' },
+  savings:       { name: 'Savings',      emoji: '💰', color: '#6366F1' },
+  other:         { name: 'Other',        emoji: '📦', color: '#64748B' },
+};
+
+const PAYMENT_METHODS = {
+  credit: { name: 'Credit Card',  icon: '💳' },
+  paypay: { name: 'PayPay',       icon: '📱' },
+  cash:   { name: 'Cash',         icon: '💴' },
+  debit:  { name: 'Bank Debit',   icon: '🏦' },
+};
+
+const ACCOUNT_TYPE_LABEL = {
+  bank: 'Bank Account',
+  emoney: 'e-Money',
+  investment: 'Investment',
+  cash: 'Cash on Hand',
+};
+
+const INCOME_CATEGORIES = {
+  salary:  { name: 'Salary',   emoji: '💼', color: '#22C55E' },
+  bonus:   { name: 'Bonus',    emoji: '🎁', color: '#6366F1' },
+  other:   { name: 'Other',    emoji: '💹', color: '#14B8A6' },
+};
+
+// Auto-categorization rules
+// Note: SMBC CSV uses old JIS katakana: ファ→フア, ジャ→ジヤ, ッ→ツ, ュ→ユ, ー→− etc.
+// We normalize − to ー before matching, but other substitutions need explicit patterns.
+const AUTO_RULES = [
+  // Convenience stores
+  { re: /ローソン|セブンイレブン|ファミリーマート|フアミリーマート|フアミリ|デイリーヤマザキ|ニューデイズ|ニユーデイ|ミニストップ|ポプラ|コンビニ|ポヴォ/, cat: 'convenience' },
+  // Supermarkets
+  { re: /イトーヨーカドー|マイバスケット|マイバスケツ|スーパー|ライフ|西友|イオン|マックスバリュ|業務スーパー/, cat: 'food' },
+  // Vending machines
+  { re: /ジヤパンビバレツジ|ジャパンビバレッジ|ビバレツジ|ビバレッジ|自動販売/, cat: 'convenience' },
+  // Cafes
+  { re: /カフェ|カフエ|スターバックス|タリーズ|ドトール|コーヒー|コーヒ|カルディ|デイルコヒ|ダイルコヒ|スタバ|パドラーズ/, cat: 'cafe' },
+  // Dining / restaurants
+  { re: /吉野家|ヨシノヤ|マクドナルド|ピザ|ラーメン|レストラン|バーガー|カツヤ|ビストロ|居酒屋|焼肉|カルビ|ヤキニク|天ぷら|とんかつ|蕎麦|うどん|タンドール|サンダイメ|チビトー|ルコ/, cat: 'dining' },
+  // Movies
+  { re: /映画|シネマ|東宝|シネマズ|映画館|トウホウ/, cat: 'movies' },
+  // Transport
+  { re: /スイカ|モバイルスイカ|モバイルスイ|交通|バス|タクシー|電車|地下鉄|PASMO|パスモ/, cat: 'transport' },
+  // Amazon
+  { re: /ＡＭＡＺＯＮ|Amazon|アマゾン/, cat: 'shopping' },
+  // Streaming / subscriptions
+  { re: /ネツトフリツクス|ネットフリックス|NETFLIX|Netflix|スポティファイ|Ｓｐｏｔｉｆｙ|Spotify|アップル|Applemusic|YouTube/, cat: 'entertainment' },
+  // Utilities
+  { re: /ガス|電気|水道|NHK|光熱|電力|東京ガス|トウキヨウガス|東電|ポポ/, cat: 'utilities' },
+  // Health
+  { re: /病院|薬|クリニック|医院|調剤|ドラッグ|マツキヨ|ウエルシア|ツルハ|スギ薬局|サンドラッグ/, cat: 'health' },
+  // Clothes
+  { re: /ユニクロ|GU|ジーユー|アパレル|ファッション|洋服|衣料|ルミネ|マルイ|キタセンジユ|ネオリーブ|ルカ/, cat: 'clothes' },
+  // Shopping (general)
+  { re: /プラザ|ニトリ|無印|コスメ|デパート|ショッピング/, cat: 'shopping' },
+];
+
+function normalizeJP(str) {
+  // SMBC CSV uses fullwidth dashes instead of katakana prolonged sound mark (ー)
+  return str
+    .replace(/[－−‐—―]/g, 'ー')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function autoCategory(merchant) {
+  const norm = normalizeJP(merchant);
+  for (const rule of AUTO_RULES) {
+    if (rule.re.test(norm) || rule.re.test(merchant)) return rule.cat;
+  }
+  return 'other';
+}
+
+// ════════════════════════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════════════════════════
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem('kakeibo_v1') || '{}'); }
+  catch { return {}; }
+}
+
+function saveData(data) {
+  localStorage.setItem('kakeibo_v1', JSON.stringify(data));
+}
+
+function getState() {
+  const d = loadData();
+  const defaultAccounts = {
+    smbc:   { name: 'SMBC',          type: 'bank',       icon: '🏦', balance: 1000000 },
+    yucho:  { name: 'ゆうちょ銀行',    type: 'bank',       icon: '🏦', balance: 120137 },
+    paypay: { name: 'PayPay',        type: 'emoney',     icon: '📱', balance: 0 },
+    cash:   { name: 'Cash',          type: 'cash',       icon: '💴', balance: 0 },
+    sbi:    { name: 'SBI証券',        type: 'investment', icon: '📈', balance: 0 },
+  };
+  // Merge so newly-added default accounts (e.g. Cash) appear for existing users
+  // without overwriting balances they've already set.
+  const accounts = { ...defaultAccounts, ...(d.accounts || {}) };
+
+  return {
+    transactions: d.transactions || [],
+    budgets: d.budgets || {
+      food: 30000, convenience: 10000, dining: 20000, cafe: 8000,
+      transport: 15000, entertainment: 5000, movies: 3000,
+      daily: 10000, shopping: 10000, clothes: 10000,
+      utilities: 10000, health: 5000, vacation: 0,
+      savings: 30000, other: 5000,
+    },
+    monthlyBudget: d.monthlyBudget || 150000,
+    accounts,
+    transfers: d.transfers || [],
+    settlements: d.settlements || [],
+  };
+}
+
+function setState(updates) {
+  const current = loadData();
+  saveData({ ...current, ...updates });
+}
+
+// Determine which account a transaction affects, based on its payment method.
+function txAccountKey(tx) {
+  if (!tx) return null;
+  if (tx.paymentMethod === 'paypay') return 'paypay';
+  if (tx.paymentMethod === 'cash') return 'cash';
+  if (tx.paymentMethod === 'debit') return tx.debitAccount || null;
+  return null;
+}
+
+// Sync a PayPay/Bank-Debit-tagged transaction's effect on the relevant account balance.
+// sign = +1 to apply the transaction's effect, -1 to reverse it (e.g. before an edit/delete).
+function applyTxToAccounts(tx, sign) {
+  const key = txAccountKey(tx);
+  if (!key) return;
+  const state = getState();
+  if (!state.accounts[key]) return;
+  const delta = (tx.txType === 'income' ? tx.amount : -tx.amount) * sign;
+  state.accounts[key].balance += delta;
+  setState({ accounts: state.accounts });
+}
+
+// After a credit card statement CSV is imported/reconciled, settle the billing
+// cycle's total against ゆうちょ銀行, debited on the 27th — matching the real
+// auto-debit schedule. Re-importing/adjusting the same cycle updates the
+// settlement instead of double-debiting.
+function reconcileCreditSettlement(billingYm) {
+  const state = getState();
+  const yuchoKey = 'yucho';
+  if (!state.accounts[yuchoKey]) return { total: 0 };
+
+  const total = state.transactions
+    .filter(t => t.paymentMethod === 'credit' && t.txType !== 'income' && billingMonthOf(t.date) === billingYm)
+    .reduce((s, t) => s + t.amount, 0);
+
+  const settlements = state.settlements || [];
+  const idx = settlements.findIndex(s => s.ym === billingYm);
+
+  if (idx >= 0) {
+    const delta = total - settlements[idx].amount;
+    if (delta !== 0) {
+      state.accounts[yuchoKey].balance -= delta;
+      settlements[idx] = { ...settlements[idx], amount: total };
+    }
+  } else if (total > 0) {
+    state.accounts[yuchoKey].balance -= total;
+    settlements.push({ id: uuid(), ym: billingYm, date: `${billingYm}-27`, amount: total });
+  }
+
+  setState({ accounts: state.accounts, settlements });
+  return { total };
+}
+
+// ════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════
+
+function uuid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function fmtYen(n) {
+  return '¥' + Math.round(Math.abs(n)).toLocaleString('en-US');
+}
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function fmtDate(d) {
+  const dt = new Date(d + 'T00:00:00');
+  return `${MONTHS[dt.getMonth()]} ${dt.getDate()}`;
+}
+
+function fmtDateFull(d) {
+  const dt = new Date(d + 'T00:00:00');
+  return `${MONTHS_FULL[dt.getMonth()]} ${dt.getDate()}, ${dt.getFullYear()}`;
+}
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function currentMonthStr() { return new Date().toISOString().slice(0, 7); }
+
+function monthLabel(ym) {
+  const [y, m] = ym.split('-');
+  return `${MONTHS_FULL[parseInt(m) - 1]} ${y}`;
+}
+
+function prevMonth(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  return m === 1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
+}
+
+function nextMonth(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  return m === 12 ? `${y+1}-01` : `${y}-${String(m+1).padStart(2,'0')}`;
+}
+
+// Billing cycle: 28th of the PREVIOUS month through 27th of THIS month.
+// e.g. "2026-05" covers Apr 28 – May 27 (matching the SMBC statement).
+function billingMonthOf(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (d >= 28) {
+    // belongs to the next month's billing cycle
+    const nm = m === 12 ? 1 : m + 1;
+    const ny = m === 12 ? y + 1 : y;
+    return `${ny}-${String(nm).padStart(2, '0')}`;
+  }
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+function getMonthTxs(transactions, ym) {
+  return transactions.filter(t => billingMonthOf(t.date) === ym);
+}
+
+// Human-readable billing cycle range for a given YM, e.g. "May 28 – Jun 27"
+function billingCycleLabel(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const pm = m === 1 ? 12 : m - 1;
+  const py = m === 1 ? y - 1 : y;
+  return `${MONTHS[pm - 1]} 28 – ${MONTHS[m - 1]} 27`;
+}
+
+function spentByCategory(transactions) {
+  const result = {};
+  for (const k of Object.keys(CATEGORIES)) result[k] = 0;
+  for (const t of transactions) {
+    if (t.txType === 'income') continue;
+    const k = t.category in result ? t.category : 'other';
+    result[k] += t.amount;
+  }
+  return result;
+}
+
+function incomeByCategory(transactions) {
+  const result = {};
+  for (const k of Object.keys(INCOME_CATEGORIES)) result[k] = 0;
+  for (const t of transactions) {
+    if (t.txType !== 'income') continue;
+    const k = t.incomeCategory in result ? t.incomeCategory : 'other';
+    result[k] += t.amount;
+  }
+  return result;
+}
+
+// ════════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════════
+
+let _toastTimer = null;
+function showToast(msg) {
+  document.querySelectorAll('.toast').forEach(e => e.remove());
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.remove(), 2600);
+}
+
+// ════════════════════════════════════════════════════════════
+// APP STATE
+// ════════════════════════════════════════════════════════════
+
+const App = {
+  view: 'dashboard',
+  currentMonth: currentMonthStr(),
+  editingTx: null,
+  editingAccount: null,
+  filterCategory: null,
+
+  go(view, opts = {}) {
+    if (opts.resetEdit !== false) this.editingTx = null;
+    // Clean up chart instance when leaving Charts view
+    if (this.view === 'charts' && view !== 'charts' && _activeChart) {
+      _activeChart.destroy(); _activeChart = null;
+    }
+    if (this.view === 'charts' && view !== 'charts' && _savingsChart) {
+      _savingsChart.destroy(); _savingsChart = null;
+    }
+    this.view = view;
+    if (opts.month) this.currentMonth = opts.month;
+    this.render();
+  },
+
+  render() {
+    const root = document.getElementById('app');
+    root.innerHTML = '';
+    const views = {
+      dashboard: renderDashboard,
+      add:       renderAdd,
+      history:   renderHistory,
+      charts:    renderCharts,
+      budget:    renderBudget,
+      settings:  renderSettings,
+      import:    renderImport,
+      accounts:  renderAccounts,
+      'account-edit': renderAccountEdit,
+    };
+    if (views[this.view]) root.appendChild(views[this.view]());
+    root.appendChild(renderNav());
+  },
+};
+
+// ════════════════════════════════════════════════════════════
+// BOTTOM NAV
+// ════════════════════════════════════════════════════════════
+
+function renderNav() {
+  const nav = document.createElement('nav');
+  nav.className = 'bottom-nav';
+  const items = [
+    { id: 'dashboard', icon: '🏠', label: 'Home' },
+    { id: 'add',       icon: '➕', label: 'Add' },
+    { id: 'history',   icon: '📋', label: 'History' },
+    { id: 'accounts',  icon: '🏦', label: 'Assets' },
+    { id: 'charts',    icon: '📈', label: 'Charts' },
+    { id: 'budget',    icon: '📊', label: 'Budget' },
+    { id: 'settings',  icon: '⚙️', label: 'Settings' },
+  ];
+  for (const item of items) {
+    const btn = document.createElement('button');
+    btn.className = 'nav-item' + (App.view === item.id || (App.view === 'account-edit' && item.id === 'accounts') ? ' active' : '');
+    btn.innerHTML = `<span class="icon">${item.icon}</span><span>${item.label}</span>`;
+    btn.onclick = () => App.go(item.id);
+    nav.appendChild(btn);
+  }
+  return nav;
+}
+
+// ════════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════════
+
+function renderDashboard() {
+  const { transactions, budgets, monthlyBudget } = getState();
+  const ym = App.currentMonth;
+  const monthTxs = getMonthTxs(transactions, ym);
+  const bycat = spentByCategory(monthTxs);
+  const totalSpent = Object.values(bycat).reduce((a, b) => a + b, 0);
+  const totalIncome = monthTxs.filter(t => t.txType === 'income').reduce((s, t) => s + t.amount, 0);
+  const net = totalIncome - totalSpent;
+  const remaining = monthlyBudget - totalSpent;
+  const usedPct = monthlyBudget > 0 ? Math.min(100, Math.round((totalSpent / monthlyBudget) * 100)) : 0;
+  const barColor = usedPct > 90 ? '#EF4444' : usedPct > 70 ? '#F97316' : '#22C55E';
+
+  const div = document.createElement('div');
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'header';
+  header.innerHTML = `<h1>Kakeibo</h1><div class="subtitle">${monthLabel(ym)} &nbsp;·&nbsp; ${billingCycleLabel(ym)}</div>`;
+  div.appendChild(header);
+
+  // Month selector
+  const ms = document.createElement('div');
+  ms.className = 'month-selector';
+  ms.innerHTML = `
+    <button class="month-btn" id="prev-m">‹</button>
+    <span class="month-label">${monthLabel(ym)}</span>
+    <button class="month-btn" id="next-m">›</button>
+  `;
+  div.appendChild(ms);
+
+  // Summary card
+  const sumCard = document.createElement('div');
+  sumCard.className = 'card';
+  sumCard.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:#22C55E12;border-radius:8px;padding:10px">
+        <div class="amount-label">Income</div>
+        <div style="font-size:20px;font-weight:800;color:#15803D;margin-top:2px">${fmtYen(totalIncome)}</div>
+      </div>
+      <div style="background:#4F46E512;border-radius:8px;padding:10px">
+        <div class="amount-label">Spending</div>
+        <div style="font-size:20px;font-weight:800;color:#4F46E5;margin-top:2px">${fmtYen(totalSpent)}</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div>
+        <div class="amount-label">Net this month</div>
+        <div style="font-size:16px;font-weight:700;color:${net >= 0 ? '#22C55E' : '#EF4444'}">${net >= 0 ? '+' : ''}${fmtYen(net)}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="amount-label">Budget remaining</div>
+        <div style="font-size:16px;font-weight:700;color:${remaining >= 0 ? '#22C55E' : '#EF4444'}">${remaining >= 0 ? fmtYen(remaining) : '-' + fmtYen(-remaining)}</div>
+        <div class="amount-label">${usedPct}% used</div>
+      </div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width:${usedPct}%;background:${barColor}"></div>
+    </div>
+  `;
+  div.appendChild(sumCard);
+
+  // Category breakdown
+  const catCard = document.createElement('div');
+  catCard.className = 'card';
+  catCard.innerHTML = `<div class="card-title">By Category</div>`;
+
+  const activeCats = Object.entries(CATEGORIES).filter(([k]) => bycat[k] > 0 || budgets[k] > 0);
+  if (activeCats.length === 0) {
+    catCard.innerHTML += `<div style="color:var(--text-muted);font-size:14px;text-align:center;padding:12px 0">Add your first transaction</div>`;
+  } else {
+    for (const [key, cat] of activeCats) {
+      const spent = bycat[key] || 0;
+      const bud = budgets[key] || 0;
+      if (spent === 0 && bud === 0) continue;
+      const pct = bud > 0 ? Math.min(100, Math.round((spent / bud) * 100)) : 0;
+      const fillColor = pct > 90 ? '#EF4444' : pct > 70 ? '#F97316' : cat.color;
+      const row = document.createElement('div');
+      row.style.marginBottom = '12px';
+      row.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="font-size:18px">${cat.emoji}</span>
+            <span style="font-size:13px;font-weight:500">${cat.name}</span>
+          </div>
+          <div style="font-size:13px;text-align:right">
+            <span style="font-weight:700">${fmtYen(spent)}</span>
+            ${bud > 0 ? `<span style="color:var(--text-muted);font-size:11px"> / ${fmtYen(bud)}</span>` : ''}
+          </div>
+        </div>
+        ${bud > 0 ? `<div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${fillColor}"></div></div>` : ''}
+      `;
+      catCard.appendChild(row);
+    }
+  }
+  div.appendChild(catCard);
+
+  // Recent transactions
+  const recent = [...monthTxs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  if (recent.length > 0) {
+    const txCard = document.createElement('div');
+    txCard.className = 'card';
+    const txHeader = document.createElement('div');
+    txHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px';
+    txHeader.innerHTML = `
+      <div class="card-title" style="margin-bottom:0">Recent Transactions</div>
+      <span style="font-size:12px;color:var(--primary);cursor:pointer;font-weight:600" id="see-all">See all →</span>
+    `;
+    txCard.appendChild(txHeader);
+    for (const tx of recent) txCard.appendChild(makeTxItem(tx));
+    div.appendChild(txCard);
+  }
+
+  // Wire up
+  setTimeout(() => {
+    div.querySelector('#prev-m').onclick = () => App.go('dashboard', { month: prevMonth(App.currentMonth), resetEdit: false });
+    div.querySelector('#next-m').onclick = () => App.go('dashboard', { month: nextMonth(App.currentMonth), resetEdit: false });
+    const sa = div.querySelector('#see-all');
+    if (sa) sa.onclick = () => App.go('history');
+  }, 0);
+
+  return div;
+}
+
+// ════════════════════════════════════════════════════════════
+// TX ITEM
+// ════════════════════════════════════════════════════════════
+
+function makeTxItem(tx, onClick) {
+  const isIncome = tx.txType === 'income';
+  const cat = isIncome
+    ? (INCOME_CATEGORIES[tx.incomeCategory] || INCOME_CATEGORIES.other)
+    : (CATEGORIES[tx.category] || CATEGORIES.other);
+  const div = document.createElement('div');
+  div.className = 'tx-item';
+  div.innerHTML = `
+    <div class="tx-emoji" style="background:${cat.color}20">${cat.emoji}</div>
+    <div class="tx-info">
+      <div class="tx-name">${tx.description || cat.name}</div>
+      <div class="tx-meta">
+        ${fmtDate(tx.date)} · ${cat.name}
+        ${isIncome ? ' · <span class="badge" style="background:#22C55E20;color:#15803D">Income</span>' : ''}
+        ${tx.source !== 'manual' ? ' · <span class="badge badge-import">Imported</span>' : ''}
+      </div>
+    </div>
+    <div class="tx-amount" style="color:${isIncome ? '#22C55E' : ''}">${isIncome ? '+' : '-'}${fmtYen(tx.amount)}</div>
+  `;
+  div.onclick = onClick || (() => {
+    App.editingTx = { ...tx };
+    App.go('add', { resetEdit: false });
+  });
+  return div;
+}
+
+// ════════════════════════════════════════════════════════════
+// ADD / EDIT TRANSACTION
+// ════════════════════════════════════════════════════════════
+
+let _form = { date: todayStr(), amount: '', category: 'dining', description: '', paymentMethod: 'credit', txType: 'expense', incomeCategory: 'salary', debitAccount: 'yucho' };
+
+function renderAdd() {
+  const isEdit = !!App.editingTx;
+  if (isEdit) {
+    _form = { ..._form, ...App.editingTx };
+    if (!_form.debitAccount) _form.debitAccount = 'yucho';
+  } else {
+    _form = { date: todayStr(), amount: '', category: 'dining', description: '', paymentMethod: 'credit', txType: 'expense', incomeCategory: 'salary', debitAccount: 'yucho' };
+  }
+
+  const div = document.createElement('div');
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.className = 'header';
+  hdr.innerHTML = `<h1>${isEdit ? 'Edit Transaction' : 'Add Transaction'}</h1>`;
+  div.appendChild(hdr);
+
+  // Expense / Income toggle
+  if (!isEdit) {
+    const toggleCard = document.createElement('div');
+    toggleCard.className = 'card';
+    toggleCard.style.paddingBottom = '12px';
+    toggleCard.innerHTML = `
+      <div style="display:flex;gap:8px">
+        <button id="tab-expense" class="tab-btn${_form.txType === 'expense' ? ' active' : ''}" style="flex:1">💸 Expense</button>
+        <button id="tab-income"  class="tab-btn${_form.txType === 'income'  ? ' active' : ''}" style="flex:1">💰 Income</button>
+      </div>
+    `;
+    div.appendChild(toggleCard);
+
+    setTimeout(() => {
+      div.querySelector('#tab-expense').onclick = () => {
+        _form.txType = 'expense';
+        div.querySelector('#tab-expense').classList.add('active');
+        div.querySelector('#tab-income').classList.remove('active');
+        div.querySelector('#cat-section').style.display = '';
+        div.querySelector('#inc-section').style.display = 'none';
+        div.querySelector('#btn-save').textContent = 'Add Expense';
+      };
+      div.querySelector('#tab-income').onclick = () => {
+        _form.txType = 'income';
+        div.querySelector('#tab-income').classList.add('active');
+        div.querySelector('#tab-expense').classList.remove('active');
+        div.querySelector('#cat-section').style.display = 'none';
+        div.querySelector('#inc-section').style.display = '';
+        div.querySelector('#btn-save').textContent = 'Add Income';
+      };
+    }, 0);
+  }
+
+  // Amount + date + memo
+  const amtCard = document.createElement('div');
+  amtCard.className = 'card';
+  amtCard.innerHTML = `
+    <div class="form-group">
+      <label>Amount (¥)</label>
+      <input type="number" class="amount-input" id="inp-amount" placeholder="0" value="${_form.amount}" inputmode="decimal" min="1">
+    </div>
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="inp-date" value="${_form.date}">
+    </div>
+    <div class="form-group">
+      <label>Note (optional)</label>
+      <input type="text" id="inp-desc" placeholder="${_form.txType === 'income' ? 'Company name, source...' : 'Store name, item...'}" value="${_form.description || ''}">
+    </div>
+  `;
+  div.appendChild(amtCard);
+
+  // Expense category section
+  const catSection = document.createElement('div');
+  catSection.id = 'cat-section';
+  catSection.style.display = _form.txType === 'income' ? 'none' : '';
+  const catCard = document.createElement('div');
+  catCard.className = 'card';
+  catCard.innerHTML = `<div class="card-title">Category</div>`;
+  const grid = document.createElement('div');
+  grid.className = 'category-grid';
+  for (const [key, cat] of Object.entries(CATEGORIES)) {
+    const btn = document.createElement('button');
+    btn.className = 'category-btn' + (_form.category === key ? ' selected' : '');
+    btn.innerHTML = `<span class="emoji">${cat.emoji}</span><span>${cat.name}</span>`;
+    btn.dataset.cat = key;
+    btn.onclick = () => {
+      _form.category = key;
+      grid.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    grid.appendChild(btn);
+  }
+  catCard.appendChild(grid);
+  catSection.appendChild(catCard);
+  div.appendChild(catSection);
+
+  // Income category section
+  const incSection = document.createElement('div');
+  incSection.id = 'inc-section';
+  incSection.style.display = _form.txType === 'income' ? '' : 'none';
+  const incCard = document.createElement('div');
+  incCard.className = 'card';
+  incCard.innerHTML = `<div class="card-title">Income Type</div>`;
+  const incGrid = document.createElement('div');
+  incGrid.className = 'pay-grid';
+  for (const [key, ic] of Object.entries(INCOME_CATEGORIES)) {
+    const btn = document.createElement('button');
+    btn.className = 'category-btn' + (_form.incomeCategory === key ? ' selected' : '');
+    btn.innerHTML = `<span class="emoji">${ic.emoji}</span><span>${ic.name}</span>`;
+    btn.onclick = () => {
+      _form.incomeCategory = key;
+      incGrid.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    incGrid.appendChild(btn);
+  }
+  incCard.appendChild(incGrid);
+  incSection.appendChild(incCard);
+  div.appendChild(incSection);
+
+  // Payment method (expense only)
+  const paySection = document.createElement('div');
+  paySection.id = 'pay-section';
+  const payCard = document.createElement('div');
+  payCard.className = 'card';
+  payCard.innerHTML = `<div class="card-title">Payment Method</div>`;
+  const payGrid = document.createElement('div');
+  payGrid.className = 'pay-grid';
+  for (const [key, pm] of Object.entries(PAYMENT_METHODS)) {
+    const btn = document.createElement('button');
+    btn.className = 'category-btn' + (_form.paymentMethod === key ? ' selected' : '');
+    btn.innerHTML = `<span class="emoji">${pm.icon}</span><span>${pm.name}</span>`;
+    btn.dataset.pay = key;
+    btn.onclick = () => {
+      _form.paymentMethod = key;
+      payGrid.querySelectorAll('[data-pay]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      debitAccountGroup.style.display = key === 'debit' ? '' : 'none';
+    };
+    payGrid.appendChild(btn);
+  }
+  payCard.appendChild(payGrid);
+
+  // Bank account picker, shown only when "Bank Debit" is selected
+  const { accounts: accountsForForm } = getState();
+  const bankAccountEntries = Object.entries(accountsForForm).filter(([, a]) => a.type === 'bank');
+  const debitAccountGroup = document.createElement('div');
+  debitAccountGroup.className = 'form-group';
+  debitAccountGroup.style.cssText = 'margin-top:12px;' + (_form.paymentMethod === 'debit' ? '' : 'display:none');
+  debitAccountGroup.innerHTML = `
+    <label>Debited From</label>
+    <select id="inp-debit-account">
+      ${bankAccountEntries.map(([k, a]) => `<option value="${k}" ${_form.debitAccount === k ? 'selected' : ''}>${a.name}</option>`).join('')}
+    </select>
+  `;
+  payCard.appendChild(debitAccountGroup);
+
+  paySection.appendChild(payCard);
+  div.appendChild(paySection);
+
+  // Submit buttons
+  const btnWrap = document.createElement('div');
+  btnWrap.style.padding = '4px 14px 14px';
+  const saveLabel = isEdit ? 'Update' : (_form.txType === 'income' ? 'Add Income' : 'Add Expense');
+  btnWrap.innerHTML = `
+    <button class="btn btn-primary" id="btn-save">${saveLabel}</button>
+    ${isEdit ? '<button class="btn btn-danger" id="btn-del" style="margin-top:10px">Delete Transaction</button>' : ''}
+  `;
+  div.appendChild(btnWrap);
+
+  // Events
+  setTimeout(() => {
+    const debitAccountSel = div.querySelector('#inp-debit-account');
+    if (debitAccountSel) {
+      debitAccountSel.onchange = () => { _form.debitAccount = debitAccountSel.value; };
+    }
+
+    div.querySelector('#btn-save').onclick = () => {
+      const amount = parseFloat(div.querySelector('#inp-amount').value);
+      const date = div.querySelector('#inp-date').value;
+      const description = div.querySelector('#inp-desc').value.trim();
+
+      if (!amount || amount <= 0) { showToast('Please enter an amount'); return; }
+      if (!date) { showToast('Please select a date'); return; }
+      if (_form.paymentMethod === 'debit' && !_form.debitAccount) { showToast('Please choose an account'); return; }
+
+      const { transactions } = getState();
+
+      if (isEdit) {
+        const idx = transactions.findIndex(t => t.id === App.editingTx.id);
+        if (idx >= 0) {
+          const oldTx = { ...App.editingTx };
+          transactions[idx] = {
+            ...transactions[idx],
+            amount: Math.round(amount),
+            date,
+            description,
+            txType: _form.txType,
+            category: _form.txType === 'income' ? 'other' : _form.category,
+            incomeCategory: _form.txType === 'income' ? _form.incomeCategory : undefined,
+            paymentMethod: _form.paymentMethod,
+            debitAccount: _form.paymentMethod === 'debit' ? _form.debitAccount : undefined,
+          };
+          setState({ transactions });
+          applyTxToAccounts(oldTx, -1);
+          applyTxToAccounts(transactions[idx], 1);
+          showToast('Updated ✓');
+        }
+      } else {
+        const newTx = {
+          id: uuid(),
+          date,
+          amount: Math.round(amount),
+          txType: _form.txType,
+          category: _form.txType === 'income' ? 'other' : _form.category,
+          incomeCategory: _form.txType === 'income' ? _form.incomeCategory : undefined,
+          description,
+          paymentMethod: _form.paymentMethod,
+          debitAccount: _form.paymentMethod === 'debit' ? _form.debitAccount : undefined,
+          source: 'manual',
+        };
+        transactions.push(newTx);
+        setState({ transactions });
+        applyTxToAccounts(newTx, 1);
+        showToast(_form.txType === 'income' ? 'Income added ✓' : 'Added ✓');
+      }
+      App.go('history');
+    };
+
+    const delBtn = div.querySelector('#btn-del');
+    if (delBtn) {
+      delBtn.onclick = () => {
+        if (!confirm('Delete this transaction?')) return;
+        const { transactions } = getState();
+        applyTxToAccounts(App.editingTx, -1);
+        setState({ transactions: transactions.filter(t => t.id !== App.editingTx.id) });
+        showToast('Deleted');
+        App.go('history');
+      };
+    }
+  }, 0);
+
+  return div;
+}
+
+// ════════════════════════════════════════════════════════════
+// HISTORY
+// ════════════════════════════════════════════════════════════
+
+function renderHistory() {
+  const { transactions } = getState();
+  const ym = App.currentMonth;
+  const monthTxs = getMonthTxs(transactions, ym).sort((a, b) => b.date.localeCompare(a.date));
+
+  const div = document.createElement('div');
+
+  const hdr = document.createElement('div');
+  hdr.className = 'header';
+  hdr.innerHTML = `<h1>History</h1><div class="subtitle">${monthLabel(ym)}</div>`;
+  div.appendChild(hdr);
+
+  // Month selector
+  const ms = document.createElement('div');
+  ms.className = 'month-selector';
+  ms.innerHTML = `
+    <button class="month-btn" id="prev-m">‹</button>
+    <span class="month-label">${monthLabel(ym)}</span>
+    <button class="month-btn" id="next-m">›</button>
+  `;
+  div.appendChild(ms);
+
+  // Summary row
+  const total = monthTxs.reduce((s, t) => s + t.amount, 0);
+  const chipRow = document.createElement('div');
+  chipRow.style.cssText = 'padding:0 14px 6px;display:flex;gap:8px;align-items:center';
+  chipRow.innerHTML = `
+    <span style="font-size:13px;color:var(--text-muted)">${monthTxs.length} transactions</span>
+    <span style="font-size:13px;font-weight:700">Total ${fmtYen(total)}</span>
+  `;
+  div.appendChild(chipRow);
+
+  if (monthTxs.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = `<div class="empty-icon">📭</div><p>No transactions this month.<br>Tap Add to record an expense.</p>`;
+    div.appendChild(empty);
+  } else {
+    const byDate = {};
+    for (const tx of monthTxs) {
+      if (!byDate[tx.date]) byDate[tx.date] = [];
+      byDate[tx.date].push(tx);
+    }
+
+    for (const [date, txs] of Object.entries(byDate)) {
+      const dateHdr = document.createElement('div');
+      dateHdr.className = 'tx-date-header';
+      const dayTotal = txs.reduce((s, t) => s + t.amount, 0);
+      dateHdr.innerHTML = `<span>${fmtDate(date)}</span><span>${fmtYen(dayTotal)}</span>`;
+      div.appendChild(dateHdr);
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.margin = '0 14px 6px';
+      card.style.padding = '4px 14px';
+      for (const tx of txs) card.appendChild(makeTxItem(tx));
+      div.appendChild(card);
+    }
+  }
+
+  // Import CTA
+  const importWrap = document.createElement('div');
+  importWrap.style.padding = '8px 14px 14px';
+  importWrap.innerHTML = `<button class="btn btn-secondary" id="csv-btn">📂 Import Credit Card CSV</button>`;
+  div.appendChild(importWrap);
+
+  setTimeout(() => {
+    div.querySelector('#prev-m').onclick = () => App.go('history', { month: prevMonth(App.currentMonth), resetEdit: false });
+    div.querySelector('#next-m').onclick = () => App.go('history', { month: nextMonth(App.currentMonth), resetEdit: false });
+    div.querySelector('#csv-btn').onclick = () => App.go('import');
+  }, 0);
+
+  return div;
+}
+
+// ════════════════════════════════════════════════════════════
+// IMPORT (SMBC CSV)
+// ════════════════════════════════════════════════════════════
+
+function renderImport() {
+  const div = document.createElement('div');
+
+  const hdr = document.createElement('div');
+  hdr.className = 'header';
+  hdr.innerHTML = `
+    <h1>Import CSV</h1>
+    <div class="subtitle">Credit Card statement (Shift-JIS)</div>
+  `;
+  div.appendChild(hdr);
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:16px">
+      Upload your credit card statement CSV.<br>
+      <strong>Duplicate transactions are skipped automatically.</strong>
+    </p>
+    <div class="import-zone" id="drop-zone">
+      <div class="import-icon">📂</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px">Tap to select CSV file</div>
+      <div style="font-size:12px;color:var(--text-muted)">Credit card statement CSV</div>
+    </div>
+    <input type="file" id="csv-file" accept=".csv" style="display:none">
+    <div id="preview-area" style="margin-top:16px"></div>
+  `;
+  div.appendChild(card);
+
+  const backWrap = document.createElement('div');
+  backWrap.style.padding = '0 14px 14px';
+  backWrap.innerHTML = `<button class="btn btn-secondary" id="back-btn">← Back</button>`;
+  div.appendChild(backWrap);
+
+  setTimeout(() => {
+    div.querySelector('#drop-zone').onclick = () => div.querySelector('#csv-file').click();
+    div.querySelector('#back-btn').onclick = () => App.go('history');
+    div.querySelector('#csv-file').onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) processCSV(file, div.querySelector('#preview-area'));
+    };
+  }, 0);
+
+  return div;
+}
+
+function processCSV(file, previewEl) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const buf = e.target.result;
+    let text;
+    try { text = new TextDecoder('shift-jis').decode(new Uint8Array(buf)); }
+    catch { text = new TextDecoder('utf-8').decode(new Uint8Array(buf)); }
+
+    const parsed = parseSMBCCSV(text);
+    previewEl.innerHTML = '';
+
+    if (parsed.length === 0) {
+      previewEl.innerHTML = `<div style="color:#EF4444;text-align:center;padding:16px;font-size:14px">⚠️ No transactions found.<br><span style="font-size:12px;color:var(--text-muted)">Make sure this is a supported credit card statement CSV.</span></div>`;
+      return;
+    }
+
+    const { transactions } = getState();
+    const existingHashes = new Set(transactions.filter(t => t.importHash).map(t => t.importHash));
+    const newItems = parsed.filter(t => !existingHashes.has(t.importHash));
+    const dupeCount = parsed.length - newItems.length;
+
+    // Mutable copy for category editing
+    const importData = newItems.map(t => ({ ...t }));
+
+    // Detect billing cycle from parsed dates
+    const parsedDates = parsed.map(t => t.date).sort();
+    const earliestDate = parsedDates[0];
+    const latestDate = parsedDates[parsedDates.length - 1];
+    const billingYm = billingMonthOf(latestDate); // statement month = billing month of the last transaction
+    const cycleLabel = billingCycleLabel(billingYm);
+
+    // Summary line
+    const summary = document.createElement('div');
+    summary.style.cssText = 'font-size:13px;margin-bottom:10px;padding:10px 14px;background:var(--bg);border-radius:10px;line-height:1.6';
+    summary.innerHTML = `
+      <div style="font-weight:600;color:var(--primary);margin-bottom:4px">📅 Billing cycle: ${cycleLabel} (${monthLabel(billingYm)} statement)</div>
+      Found: <strong>${parsed.length}</strong>
+      ${dupeCount > 0 ? `&nbsp;· Skipped (duplicates): <span style="color:var(--text-muted)">${dupeCount}</span>` : ''}
+      &nbsp;· To import: <strong style="color:var(--primary)">${newItems.length}</strong>
+    `;
+    previewEl.appendChild(summary);
+
+    if (newItems.length === 0) {
+      previewEl.innerHTML += `<div style="text-align:center;color:var(--text-muted);padding:12px;font-size:14px">All transactions already imported ✓</div>`;
+      return;
+    }
+
+    // Scrollable preview list
+    const list = document.createElement('div');
+    list.className = 'scroll-list';
+    for (let i = 0; i < importData.length; i++) {
+      const tx = importData[i];
+      const cat = CATEGORIES[tx.category] || CATEGORIES.other;
+      const row = document.createElement('div');
+      row.className = 'scroll-item';
+      row.innerHTML = `
+        <span style="font-size:18px;flex-shrink:0">${cat.emoji}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tx.description}</div>
+          <div style="color:var(--text-muted);font-size:11px">${fmtDateFull(tx.date)}</div>
+        </div>
+        <div style="font-weight:700;flex-shrink:0;margin-right:8px">-${fmtYen(tx.amount)}</div>
+        <select style="font-size:11px;padding:4px 6px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);max-width:90px" data-idx="${i}">
+          ${Object.entries(CATEGORIES).map(([k, c]) => `<option value="${k}" ${tx.category === k ? 'selected' : ''}>${c.emoji} ${c.name}</option>`).join('')}
+        </select>
+      `;
+      list.appendChild(row);
+    }
+    previewEl.appendChild(list);
+
+    list.querySelectorAll('select').forEach(sel => {
+      sel.onchange = () => { importData[parseInt(sel.dataset.idx)].category = sel.value; };
+    });
+
+    const importBtn = document.createElement('button');
+    importBtn.className = 'btn btn-primary';
+    importBtn.textContent = `Import ${newItems.length} transaction${newItems.length !== 1 ? 's' : ''}`;
+    importBtn.onclick = () => {
+      const { transactions } = getState();
+      const toAdd = importData.map(t => ({
+        id: uuid(),
+        date: t.date,
+        amount: t.amount,
+        category: t.category,
+        description: t.description,
+        paymentMethod: 'credit',
+        source: 'smbc_import',
+        importHash: t.importHash,
+      }));
+      setState({ transactions: [...transactions, ...toAdd] });
+      const { total } = reconcileCreditSettlement(billingYm);
+      showToast(`Imported ${toAdd.length} · ${fmtYen(total)} settles from ゆうちょ銀行 on the 27th ✓`);
+      App.go('accounts');
+    };
+    previewEl.appendChild(importBtn);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseSMBCCSV(text) {
+  const lines = text.split(/\r?\n/);
+  const results = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const cols = line.split(',');
+    if (cols.length < 6) continue;
+
+    const type = cols[0].trim();
+    if (type !== 'ショッピング') continue;
+
+    const dateStr = cols[1].trim();
+    const merchant = normalizeJP(cols[2]);
+    const amountStr = cols[4].trim().replace(/[^\d]/g, '');
+    const amount = parseInt(amountStr, 10);
+
+    if (!amount || amount <= 0) continue;
+
+    const dm = dateStr.match(/(\d{4})年(\d{2})月(\d{2})日/);
+    if (!dm) continue;
+    const date = `${dm[1]}-${dm[2]}-${dm[3]}`;
+
+    const importHash = `smbc_${date}_${merchant}_${amount}`;
+
+    results.push({
+      date,
+      description: merchant,
+      amount,
+      category: autoCategory(merchant),
+      importHash,
+    });
+  }
+
+  return results;
+}
+
+// ════════════════════════════════════════════════════════════
+// BUDGET
+// ════════════════════════════════════════════════════════════
+
+function renderBudget() {
+  const { budgets, monthlyBudget, transactions } = getState();
+  const ym = App.currentMonth;
+  const monthTxs = getMonthTxs(transactions, ym);
+  const bycat = spentByCategory(monthTxs);
+
+  const div = document.createElement('div');
+
+  const hdr = document.createElement('div');
+  hdr.className = 'header';
+  hdr.innerHTML = `<h1>Budget</h1><div class="subtitle">Set monthly spending limits</div>`;
+  div.appendChild(hdr);
+
+  // Total budget
+  const totalCard = document.createElement('div');
+  totalCard.className = 'card';
+  totalCard.innerHTML = `
+    <div class="card-title">Monthly Budget</div>
+    <div class="form-group">
+      <input type="number" id="total-budget" value="${monthlyBudget}" inputmode="decimal" style="font-size:22px;font-weight:700;text-align:center">
+    </div>
+  `;
+  div.appendChild(totalCard);
+
+  // Per-category budgets
+  const catCard = document.createElement('div');
+  catCard.className = 'card';
+  catCard.innerHTML = `<div class="card-title">Category Budgets</div>`;
+
+  for (const [key, cat] of Object.entries(CATEGORIES)) {
+    if (key === 'other') continue;
+    const bud = budgets[key] || 0;
+    const spent = bycat[key] || 0;
+    const pct = bud > 0 ? Math.min(100, Math.round((spent / bud) * 100)) : 0;
+    const fillColor = pct > 90 ? '#EF4444' : pct > 70 ? '#F97316' : cat.color;
+
+    const row = document.createElement('div');
+    row.style.marginBottom = '16px';
+    row.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="font-size:18px">${cat.emoji}</span>
+        <label style="text-transform:none;letter-spacing:0;font-size:14px;font-weight:500;color:var(--text);margin-bottom:0">${cat.name}</label>
+        <span style="margin-left:auto;font-size:12px;color:var(--text-muted)">Spent: ${fmtYen(spent)}</span>
+      </div>
+      <input type="number" data-cat="${key}" value="${bud}" inputmode="decimal" placeholder="0 (no limit)">
+      ${bud > 0 ? `<div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${fillColor}"></div></div>` : ''}
+    `;
+    catCard.appendChild(row);
+  }
+  div.appendChild(catCard);
+
+  const saveWrap = document.createElement('div');
+  saveWrap.style.padding = '0 14px 14px';
+  saveWrap.innerHTML = `<button class="btn btn-primary" id="save-btn">Save</button>`;
+  div.appendChild(saveWrap);
+
+  setTimeout(() => {
+    div.querySelector('#save-btn').onclick = () => {
+      const mb = parseInt(div.querySelector('#total-budget').value, 10) || 0;
+      const newBudgets = { ...budgets };
+      div.querySelectorAll('[data-cat]').forEach(inp => {
+        newBudgets[inp.dataset.cat] = parseInt(inp.value, 10) || 0;
+      });
+      setState({ budgets: newBudgets, monthlyBudget: mb });
+      showToast('Budget saved ✓');
+      App.go('dashboard');
+    };
+  }, 0);
+
+  return div;
+}
+
+// ════════════════════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════════════════════
+
+function renderSettings() {
+  const { transactions } = getState();
+  const div = document.createElement('div');
+
+  const hdr = document.createElement('div');
+  hdr.className = 'header';
+  hdr.innerHTML = `<h1>Settings</h1>`;
+  div.appendChild(hdr);
+
+  // Stats card
+  const statsCard = document.createElement('div');
+  statsCard.className = 'card';
+  statsCard.innerHTML = `
+    <div class="card-title">Overview</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-weight:800">${transactions.length}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Total Transactions</div>
+      </div>
+      <div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-weight:800">${fmtYen(transactions.reduce((s,t)=>s+t.amount,0))}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Total Spent</div>
+      </div>
+    </div>
+  `;
+  div.appendChild(statsCard);
+
+  // Sync / backup card
+  const syncCard = document.createElement('div');
+  syncCard.className = 'card';
+  syncCard.innerHTML = `
+    <div class="card-title">Backup & Sync</div>
+    <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:14px">
+      To share data between your phone and PC, export a JSON backup and save it to iCloud or Google Drive, then import it on the other device.
+    </p>
+    <button class="btn btn-secondary" id="export-btn" style="margin-bottom:10px">📤 Export Data (JSON)</button>
+    <div class="import-zone" id="json-zone" style="padding:18px">
+      <div style="font-size:24px;margin-bottom:4px">📥</div>
+      <div style="font-size:14px;font-weight:600">Import Data</div>
+      <div style="font-size:12px;color:var(--text-muted)">Select backup JSON file</div>
+    </div>
+    <input type="file" id="json-file" accept=".json" style="display:none">
+  `;
+  div.appendChild(syncCard);
+
+  // CSV import shortcut
+  const csvCard = document.createElement('div');
+  csvCard.className = 'card';
+  csvCard.innerHTML = `
+    <div class="card-title">Credit Card</div>
+    <button class="btn btn-secondary" id="csv-btn">📂 Import Credit Card Statement CSV</button>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">Imported charges are automatically settled from ゆうちょ銀行 on the 27th of the billing month.</div>
+  `;
+  div.appendChild(csvCard);
+
+  // Danger zone
+  const dangerCard = document.createElement('div');
+  dangerCard.className = 'card';
+  dangerCard.innerHTML = `
+    <div class="card-title">Danger Zone</div>
+    <button class="btn btn-danger" id="clear-btn">🗑️ Delete All Data</button>
+  `;
+  div.appendChild(dangerCard);
+
+  // Version note
+  const note = document.createElement('div');
+  note.style.cssText = 'text-align:center;padding:12px;font-size:11px;color:var(--text-muted)';
+  note.textContent = 'Kakeibo v1.0 · Data stored on this device';
+  div.appendChild(note);
+
+  setTimeout(() => {
+    div.querySelector('#export-btn').onclick = () => {
+      const data = loadData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `kakeibo_backup_${todayStr()}.json`;
+      a.click();
+    };
+
+    div.querySelector('#json-zone').onclick = () => div.querySelector('#json-file').click();
+    div.querySelector('#json-file').onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (!data.transactions) throw new Error('invalid');
+          if (!confirm(`Import ${data.transactions.length} transactions? This will merge with your current data.`)) return;
+          const { transactions: current } = getState();
+          const ids = new Set(current.map(t => t.id));
+          const merged = [...current, ...data.transactions.filter(t => !ids.has(t.id))];
+          setState({ ...data, transactions: merged });
+          showToast('Import complete ✓');
+          App.go('dashboard');
+        } catch {
+          showToast('Invalid file');
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    div.querySelector('#csv-btn').onclick = () => App.go('import');
+
+    div.querySelector('#clear-btn').onclick = () => {
+      if (!confirm('Delete all data? This cannot be undone.')) return;
+      localStorage.removeItem('kakeibo_v1');
+      showToast('All data deleted');
+      App.go('dashboard');
+    };
+  }, 0);
+
+  return div;
+}
+
+// ════════════════════════════════════════════════════════════
+// CHARTS
+// ════════════════════════════════════════════════════════════
+
+let _activeChart = null;
+let _savingsChart = null;
+
+function getMonthlyData(transactions, numMonths) {
+  const now = new Date();
+  return Array.from({ length: numMonths }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (numMonths - 1 - i), 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = `${MONTHS[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
+    const txs = getMonthTxs(transactions, ym);
+    const spending = txs.filter(t => t.txType !== 'income' && t.category !== 'savings').reduce((s, t) => s + t.amount, 0);
+    const saved    = txs.filter(t => t.txType !== 'income' && t.category === 'savings').reduce((s, t) => s + t.amount, 0);
+    const income   = txs.filter(t => t.txType === 'income').reduce((s, t) => s + t.amount, 0);
+    return { ym, label, spending, saved, income, txs };
+  });
+}
+
+// Running total saved as of each month in `months`, including all savings
+// contributions made before the window started.
+function getCumulativeSavings(transactions, months) {
+  const earliestYm = months[0].ym;
+  let running = transactions
+    .filter(t => t.txType !== 'income' && t.category === 'savings' && billingMonthOf(t.date) < earliestYm)
+    .reduce((s, t) => s + t.amount, 0);
+  return months.map(m => (running += m.saved));
+}
+
+function renderCharts() {
+  if (_activeChart) { _activeChart.destroy(); _activeChart = null; }
+  if (_savingsChart) { _savingsChart.destroy(); _savingsChart = null; }
+
+  const { transactions, monthlyBudget } = getState();
+  const div = document.createElement('div');
+
+  const hdr = document.createElement('div');
+  hdr.className = 'header';
+  hdr.innerHTML = `<h1>Charts</h1><div class="subtitle">Monthly income & spending</div>`;
+  div.appendChild(hdr);
+
+  const months = getMonthlyData(transactions, 12);
+  const hasData = months.some(m => m.spending > 0 || m.income > 0 || m.saved > 0);
+
+  if (!hasData) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = `<div class="empty-icon">📊</div><p>No data yet.<br>Add transactions to see your history.</p>`;
+    div.appendChild(empty);
+    return div;
+  }
+
+  const chartCard = document.createElement('div');
+  chartCard.className = 'card';
+  chartCard.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div class="card-title" style="margin-bottom:0">Monthly Overview</div>
+    </div>
+    <div style="display:flex;gap:14px;font-size:11px;color:var(--text-muted);margin-bottom:12px">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#22C55E;margin-right:4px;vertical-align:middle"></span>Income</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#4F46E5;margin-right:4px;vertical-align:middle"></span>Spending</span>
+      <span><span style="display:inline-block;width:18px;height:0;border-top:2px dashed #F97316;margin-right:4px;vertical-align:middle"></span>Budget</span>
+    </div>
+    <canvas id="monthly-chart"></canvas>
+    <div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:10px">Tap a bar to see that month's breakdown</div>
+  `;
+  div.appendChild(chartCard);
+
+  const totalSaved = getCumulativeSavings(transactions, months).slice(-1)[0] || 0;
+  const savingsCard = document.createElement('div');
+  savingsCard.className = 'card';
+  savingsCard.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div class="card-title" style="margin-bottom:0">Savings</div>
+      <span style="font-size:13px;font-weight:700;color:#14B8A6">Total: ${fmtYen(totalSaved)}</span>
+    </div>
+    <div style="display:flex;gap:14px;font-size:11px;color:var(--text-muted);margin-bottom:12px">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#6366F1;margin-right:4px;vertical-align:middle"></span>Saved this month</span>
+      <span><span style="display:inline-block;width:18px;height:2px;background:#14B8A6;margin-right:4px;vertical-align:middle"></span>Total saved</span>
+    </div>
+    <canvas id="savings-chart"></canvas>
+  `;
+  div.appendChild(savingsCard);
+
+  const detailPanel = document.createElement('div');
+  detailPanel.id = 'detail-panel';
+  div.appendChild(detailPanel);
+
+  setTimeout(() => {
+    const savingsCanvas = savingsCard.querySelector('#savings-chart');
+    const cumulativeSaved = getCumulativeSavings(transactions, months);
+    _savingsChart = new Chart(savingsCanvas, {
+      data: {
+        labels: months.map(m => m.label),
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Saved this month',
+            data: months.map(m => m.saved),
+            backgroundColor: '#6366F190',
+            hoverBackgroundColor: '#6366F1',
+            borderRadius: 5,
+            borderSkipped: false,
+            yAxisID: 'y',
+          },
+          {
+            type: 'line',
+            label: 'Total saved',
+            data: cumulativeSaved,
+            borderColor: '#14B8A6',
+            backgroundColor: '#14B8A620',
+            borderWidth: 2,
+            pointRadius: 2,
+            pointBackgroundColor: '#14B8A6',
+            tension: 0.3,
+            fill: true,
+            yAxisID: 'y1',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 1.5,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `  ${ctx.dataset.label}: ¥${Math.round(ctx.parsed.y).toLocaleString('en-US')}`,
+            },
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            position: 'left',
+            ticks: {
+              font: { size: 10 },
+              callback: v => v >= 10000 ? '¥' + Math.round(v / 1000) + 'k' : '¥' + v,
+              maxTicksLimit: 5,
+            },
+            grid: { color: '#F1F5F920' },
+          },
+          y1: {
+            beginAtZero: true,
+            position: 'right',
+            ticks: {
+              font: { size: 10 },
+              callback: v => v >= 10000 ? '¥' + Math.round(v / 1000) + 'k' : '¥' + v,
+              maxTicksLimit: 5,
+            },
+            grid: { drawOnChartArea: false },
+          },
+          x: {
+            ticks: { font: { size: 10 } },
+            grid: { display: false },
+          },
+        },
+      },
+    });
+  }, 50);
+
+  setTimeout(() => {
+    const canvas = chartCard.querySelector('#monthly-chart');
+    const labels = months.map(m => m.label);
+
+    const datasets = [
+      {
+        label: 'Income',
+        data: months.map(m => m.income),
+        backgroundColor: '#22C55E90',
+        hoverBackgroundColor: '#22C55E',
+        borderRadius: 5,
+        borderSkipped: false,
+      },
+      {
+        label: 'Spending',
+        data: months.map(m => m.spending),
+        backgroundColor: months.map(m =>
+          monthlyBudget > 0 && m.spending > monthlyBudget ? '#EF444490' : '#4F46E590'
+        ),
+        hoverBackgroundColor: months.map(m =>
+          monthlyBudget > 0 && m.spending > monthlyBudget ? '#EF4444' : '#4F46E5'
+        ),
+        borderRadius: 5,
+        borderSkipped: false,
+      },
+    ];
+
+    if (monthlyBudget > 0) {
+      datasets.push({
+        label: 'Budget',
+        data: months.map(() => monthlyBudget),
+        type: 'line',
+        borderColor: '#F97316',
+        borderWidth: 1.5,
+        borderDash: [5, 4],
+        pointRadius: 0,
+        fill: false,
+        tension: 0,
+      });
+    }
+
+    _activeChart = new Chart(canvas, {
+      type: 'bar',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 1.5,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `  ${ctx.dataset.label}: ¥${Math.round(ctx.parsed.y).toLocaleString('en-US')}`,
+            },
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              font: { size: 10 },
+              callback: v => v >= 10000 ? '¥' + Math.round(v / 1000) + 'k' : '¥' + v,
+              maxTicksLimit: 5,
+            },
+            grid: { color: '#F1F5F920' },
+          },
+          x: {
+            ticks: { font: { size: 10 } },
+            grid: { display: false },
+          },
+        },
+        onClick: (_, elements) => {
+          if (!elements.length) return;
+          const idx = elements[0].index;
+          showMonthDetail(months[idx], detailPanel);
+        },
+      },
+    });
+
+    const currentIdx = months.findIndex(m => m.ym === App.currentMonth);
+    if (currentIdx >= 0 && months[currentIdx].txs.length > 0) {
+      showMonthDetail(months[currentIdx], detailPanel);
+    }
+  }, 50);
+
+  return div;
+}
+
+function showMonthDetail(monthData, container) {
+  const { ym, spending, income, txs } = monthData;
+  const expenseTxs = txs.filter(t => t.txType !== 'income' && t.category !== 'savings');
+  const incomeTxs  = txs.filter(t => t.txType === 'income');
+  const bycat = spentByCategory(expenseTxs);
+  const byIncomeCat = incomeByCategory(incomeTxs);
+  const net = income - spending;
+
+  const activeCats = Object.entries(bycat)
+    .filter(([, v]) => v > 0)
+    .sort(([, a], [, b]) => b - a);
+
+  container.innerHTML = '';
+
+  // ── Summary row ──
+  const breakCard = document.createElement('div');
+  breakCard.className = 'card';
+  breakCard.innerHTML = `
+    <div class="card-title" style="margin-bottom:12px">${monthLabel(ym)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;text-align:center">
+      <div style="background:#22C55E15;border-radius:8px;padding:8px 4px">
+        <div style="font-size:10px;color:#15803D;font-weight:600;margin-bottom:2px">INCOME</div>
+        <div style="font-size:14px;font-weight:800;color:#15803D">${fmtYen(income)}</div>
+      </div>
+      <div style="background:#4F46E515;border-radius:8px;padding:8px 4px">
+        <div style="font-size:10px;color:#4F46E5;font-weight:600;margin-bottom:2px">SPENDING</div>
+        <div style="font-size:14px;font-weight:800;color:#4F46E5">${fmtYen(spending)}</div>
+      </div>
+      <div style="background:${net >= 0 ? '#22C55E' : '#EF4444'}15;border-radius:8px;padding:8px 4px">
+        <div style="font-size:10px;color:${net >= 0 ? '#15803D' : '#DC2626'};font-weight:600;margin-bottom:2px">NET</div>
+        <div style="font-size:14px;font-weight:800;color:${net >= 0 ? '#15803D' : '#DC2626'}">${net >= 0 ? '+' : ''}${fmtYen(net)}</div>
+      </div>
+    </div>
+  `;
+
+  // Spending breakdown
+  if (activeCats.length === 0) {
+    breakCard.innerHTML += `<div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px">SPENDING BREAKDOWN</div><div style="color:var(--text-muted);font-size:14px;text-align:center;padding:8px 0">No spending recorded</div>`;
+  } else {
+    const spendHead = document.createElement('div');
+    spendHead.style.cssText = 'font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px';
+    spendHead.textContent = 'SPENDING BREAKDOWN';
+    breakCard.appendChild(spendHead);
+    for (const [key, amount] of activeCats) {
+      const cat = CATEGORIES[key] || CATEGORIES.other;
+      const pct = spending > 0 ? Math.round((amount / spending) * 100) : 0;
+      const row = document.createElement('div');
+      row.style.marginBottom = '10px';
+      row.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:16px">${cat.emoji}</span>
+            <span style="font-size:13px;font-weight:500">${cat.name}</span>
+            <span style="font-size:11px;color:var(--text-muted)">${pct}%</span>
+          </div>
+          <span style="font-size:13px;font-weight:700">${fmtYen(amount)}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${pct}%;background:${cat.color}"></div>
+        </div>
+      `;
+      breakCard.appendChild(row);
+    }
+  }
+
+  // Income breakdown
+  const activeIncome = Object.entries(byIncomeCat).filter(([, v]) => v > 0);
+  if (activeIncome.length > 0) {
+    const incHead = document.createElement('div');
+    incHead.style.cssText = 'font-size:12px;font-weight:600;color:var(--text-muted);margin:14px 0 8px;border-top:1px solid var(--border);padding-top:12px';
+    incHead.textContent = 'INCOME BREAKDOWN';
+    breakCard.appendChild(incHead);
+    for (const [key, amount] of activeIncome.sort(([,a],[,b]) => b - a)) {
+      const ic = INCOME_CATEGORIES[key] || INCOME_CATEGORIES.other;
+      const pct = income > 0 ? Math.round((amount / income) * 100) : 0;
+      const row = document.createElement('div');
+      row.style.marginBottom = '10px';
+      row.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:16px">${ic.emoji}</span>
+            <span style="font-size:13px;font-weight:500">${ic.name}</span>
+            <span style="font-size:11px;color:var(--text-muted)">${pct}%</span>
+          </div>
+          <span style="font-size:13px;font-weight:700;color:#15803D">+${fmtYen(amount)}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${pct}%;background:${ic.color}"></div>
+        </div>
+      `;
+      breakCard.appendChild(row);
+    }
+  }
+
+  container.appendChild(breakCard);
+
+  // ── Transaction list ──
+  const sorted = [...txs].sort((a, b) => b.date.localeCompare(a.date));
+  if (sorted.length > 0) {
+    const txCard = document.createElement('div');
+    txCard.className = 'card';
+    txCard.innerHTML = `<div class="card-title">${sorted.length} Transaction${sorted.length !== 1 ? 's' : ''}</div>`;
+
+    // Group by date
+    const byDate = {};
+    for (const tx of sorted) {
+      if (!byDate[tx.date]) byDate[tx.date] = [];
+      byDate[tx.date].push(tx);
+    }
+    for (const [date, txs] of Object.entries(byDate)) {
+      const dateRow = document.createElement('div');
+      dateRow.style.cssText = 'font-size:11px;color:var(--text-muted);font-weight:600;padding:6px 0 2px;border-top:1px solid var(--bg);margin-top:4px';
+      dateRow.textContent = fmtDate(date);
+      txCard.appendChild(dateRow);
+      for (const tx of txs) {
+        txCard.appendChild(makeTxItem(tx, () => {
+          App.editingTx = { ...tx };
+          App.go('add', { resetEdit: false });
+        }));
+      }
+    }
+    container.appendChild(txCard);
+  }
+
+  // Smooth scroll to detail
+  setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+}
+
+// ════════════════════════════════════════════════════════════
+// ACCOUNTS
+// ════════════════════════════════════════════════════════════
+
+function accountRow(key, acc, onClick) {
+  const row = document.createElement('div');
+  row.className = 'tx-item';
+  row.innerHTML = `
+    <div class="tx-emoji" style="background:var(--primary-light)">${acc.icon}</div>
+    <div class="tx-info">
+      <div class="tx-name">${acc.name}</div>
+      <div class="tx-meta">${ACCOUNT_TYPE_LABEL[acc.type] || ''}</div>
+    </div>
+    <div class="tx-amount">${fmtYen(acc.balance)}</div>
+  `;
+  row.onclick = onClick;
+  return row;
+}
+
+function renderAccounts() {
+  const { accounts, transfers, settlements } = getState();
+
+  const div = document.createElement('div');
+
+  const hdr = document.createElement('div');
+  hdr.className = 'header';
+  hdr.innerHTML = `<h1>Accounts</h1><div class="subtitle">Balances &amp; investments</div>`;
+  div.appendChild(hdr);
+
+  const entries = Object.entries(accounts);
+  const bankEntries   = entries.filter(([, a]) => a.type === 'bank');
+  const emoneyEntries = entries.filter(([, a]) => a.type === 'emoney');
+  const cashEntries   = entries.filter(([, a]) => a.type === 'cash');
+  const investEntries = entries.filter(([, a]) => a.type === 'investment');
+
+  const liquid   = [...bankEntries, ...emoneyEntries, ...cashEntries].reduce((s, [, a]) => s + a.balance, 0);
+  const invested = investEntries.reduce((s, [, a]) => s + a.balance, 0);
+  const netWorth = liquid + invested;
+
+  // Net worth summary
+  const nwCard = document.createElement('div');
+  nwCard.className = 'card';
+  nwCard.innerHTML = `
+    <div class="card-title">Net Worth</div>
+    <div class="big-amount" style="color:var(--primary)">${fmtYen(netWorth)}</div>
+    <div style="display:flex;gap:20px;margin-top:12px">
+      <div><div class="amount-label">Liquid</div><div style="font-size:14px;font-weight:700;margin-top:2px">${fmtYen(liquid)}</div></div>
+      <div><div class="amount-label">Invested</div><div style="font-size:14px;font-weight:700;margin-top:2px">${fmtYen(invested)}</div></div>
+    </div>
+  `;
+  div.appendChild(nwCard);
+
+  const openEdit = (key) => { App.editingAccount = key; App.go('account-edit'); };
+
+  if (bankEntries.length) {
+    const c = document.createElement('div');
+    c.className = 'card';
+    c.innerHTML = `<div class="card-title">Bank Accounts</div>`;
+    for (const [k, a] of bankEntries) c.appendChild(accountRow(k, a, () => openEdit(k)));
+    div.appendChild(c);
+  }
+  if (emoneyEntries.length) {
+    const c = document.createElement('div');
+    c.className = 'card';
+    c.innerHTML = `<div class="card-title">e-Money</div>`;
+    for (const [k, a] of emoneyEntries) c.appendChild(accountRow(k, a, () => openEdit(k)));
+    div.appendChild(c);
+  }
+  if (cashEntries.length) {
+    const c = document.createElement('div');
+    c.className = 'card';
+    c.innerHTML = `<div class="card-title">Cash</div>`;
+    for (const [k, a] of cashEntries) c.appendChild(accountRow(k, a, () => openEdit(k)));
+    div.appendChild(c);
+  }
+  if (investEntries.length) {
+    const c = document.createElement('div');
+    c.className = 'card';
+    c.innerHTML = `<div class="card-title">Investments</div>`;
+    for (const [k, a] of investEntries) c.appendChild(accountRow(k, a, () => openEdit(k)));
+    div.appendChild(c);
+  }
+
+  // Transfer between accounts
+  const trCard = document.createElement('div');
+  trCard.className = 'card';
+  trCard.innerHTML = `
+    <div class="card-title">Transfer Between Accounts</div>
+    <div class="form-group">
+      <label>From</label>
+      <select id="tr-from"></select>
+    </div>
+    <div class="form-group">
+      <label>To</label>
+      <select id="tr-to"></select>
+    </div>
+    <div class="form-group">
+      <label>Amount (¥)</label>
+      <input type="number" id="tr-amount" placeholder="0" inputmode="decimal" min="1">
+    </div>
+    <button class="btn btn-primary" id="btn-transfer">Transfer</button>
+  `;
+  div.appendChild(trCard);
+
+  const detailPanel = document.createElement('div');
+  div.appendChild(detailPanel);
+
+  setTimeout(() => {
+    const fromSel = trCard.querySelector('#tr-from');
+    const toSel = trCard.querySelector('#tr-to');
+    for (const [k, a] of entries) {
+      fromSel.innerHTML += `<option value="${k}">${a.name}</option>`;
+      toSel.innerHTML += `<option value="${k}">${a.name}</option>`;
+    }
+    fromSel.value = accounts.yucho ? 'yucho' : entries[0][0];
+    toSel.value = accounts.paypay ? 'paypay' : (entries[1] ? entries[1][0] : entries[0][0]);
+
+    trCard.querySelector('#btn-transfer').onclick = () => {
+      const from = fromSel.value, to = toSel.value;
+      const amount = Math.round(parseFloat(trCard.querySelector('#tr-amount').value));
+      if (!amount || amount <= 0) { showToast('Enter an amount'); return; }
+      if (from === to) { showToast('Choose two different accounts'); return; }
+      const state = getState();
+      state.accounts[from].balance -= amount;
+      state.accounts[to].balance += amount;
+      const newTransfers = [{ id: uuid(), date: todayStr(), from, to, amount }, ...(state.transfers || [])];
+      setState({ accounts: state.accounts, transfers: newTransfers });
+      showToast(`Transferred ${fmtYen(amount)} ✓`);
+      App.go('accounts');
+    };
+  }, 0);
+
+  // Recent transfers
+  if (transfers && transfers.length) {
+    const tc = document.createElement('div');
+    tc.className = 'card';
+    tc.innerHTML = `<div class="card-title">Recent Transfers</div>`;
+    for (const t of transfers.slice(0, 5)) {
+      const row = document.createElement('div');
+      row.className = 'tx-item';
+      row.innerHTML = `
+        <div class="tx-emoji" style="background:var(--primary-light)">🔁</div>
+        <div class="tx-info">
+          <div class="tx-name">${(accounts[t.from] || {}).name || t.from} → ${(accounts[t.to] || {}).name || t.to}</div>
+          <div class="tx-meta">${fmtDate(t.date)}</div>
+        </div>
+        <div class="tx-amount">${fmtYen(t.amount)}</div>
+      `;
+      tc.appendChild(row);
+    }
+    div.appendChild(tc);
+  }
+
+  // Credit card settlements (auto-debited from ゆうちょ銀行 on the 27th)
+  if (settlements && settlements.length) {
+    const sc = document.createElement('div');
+    sc.className = 'card';
+    sc.innerHTML = `<div class="card-title">Credit Card Settlements</div>`;
+    const sortedSettlements = [...settlements].sort((a, b) => b.ym.localeCompare(a.ym));
+    for (const s of sortedSettlements.slice(0, 6)) {
+      const row = document.createElement('div');
+      row.className = 'tx-item';
+      row.innerHTML = `
+        <div class="tx-emoji" style="background:var(--primary-light)">💳</div>
+        <div class="tx-info">
+          <div class="tx-name">${monthLabel(s.ym)} statement</div>
+          <div class="tx-meta">Debited from ゆうちょ銀行 · ${fmtDate(s.date)}</div>
+        </div>
+        <div class="tx-amount">${fmtYen(s.amount)}</div>
+      `;
+      sc.appendChild(row);
+    }
+    div.appendChild(sc);
+  }
+
+  return div;
+}
+
+function renderAccountEdit() {
+  const key = App.editingAccount;
+  const { accounts } = getState();
+  const acc = accounts[key];
+
+  const div = document.createElement('div');
+
+  const hdr = document.createElement('div');
+  hdr.className = 'header';
+  hdr.innerHTML = `<h1>${acc.name}</h1><div class="subtitle">${ACCOUNT_TYPE_LABEL[acc.type] || ''} · Edit balance</div>`;
+  div.appendChild(hdr);
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="form-group">
+      <label>Current Balance (¥)</label>
+      <input type="number" class="amount-input" id="inp-balance" value="${acc.balance}" inputmode="decimal">
+    </div>
+  `;
+  div.appendChild(card);
+
+  const btnWrap = document.createElement('div');
+  btnWrap.style.padding = '4px 14px 14px';
+  btnWrap.innerHTML = `
+    <button class="btn btn-primary" id="btn-save-acc">Save</button>
+    <button class="btn btn-secondary" id="btn-cancel-acc" style="margin-top:10px">Cancel</button>
+  `;
+  div.appendChild(btnWrap);
+
+  setTimeout(() => {
+    div.querySelector('#btn-save-acc').onclick = () => {
+      const val = parseFloat(div.querySelector('#inp-balance').value);
+      if (isNaN(val)) { showToast('Enter a valid amount'); return; }
+      const state = getState();
+      state.accounts[key].balance = Math.round(val);
+      setState({ accounts: state.accounts });
+      showToast('Balance updated ✓');
+      App.go('accounts');
+    };
+    div.querySelector('#btn-cancel-acc').onclick = () => App.go('accounts');
+  }, 0);
+
+  return div;
+}
+
+// ════════════════════════════════════════════════════════════
+// START
+// ════════════════════════════════════════════════════════════
+
+App.render();
+</script>
+</body>
+</html>
